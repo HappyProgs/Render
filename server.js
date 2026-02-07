@@ -33,27 +33,30 @@ app.use((req, res, next) => {
 
 // Для проверки: в браузере или Render dashboard
 app.get('/', (req, res) => {
-    res.send('Server is active xD');
+    res.send('Server is active');
 });
 
 // Синк: клиент шлёт nick и опционально server, получает список [{ nick, server }, ...]
 app.post('/sync', (req, res) => {
-    const nick = req.body && typeof req.body.nick === 'string' ? req.body.nick.trim() : '';
-    const server = req.body && typeof req.body.server === 'string' ? req.body.server.trim() : '';
-    if (!nick || nick === 'player_spawn') {
+    try {
+        const body = req.body && typeof req.body === 'object' ? req.body : {};
+        const nick = typeof body.nick === 'string' ? body.nick.trim() : '';
+        const server = typeof body.server === 'string' ? body.server.trim() : '';
+        if (!nick || nick === 'player_spawn') {
+            prune();
+            const list = Array.from(users.entries()).map(([n, d]) => ({ nick: n, server: d.server || '' }));
+            return res.json(list);
+        }
+        users.set(nick, { lastSeen: Date.now(), server });
         prune();
         const list = Array.from(users.entries()).map(([n, d]) => ({ nick: n, server: d.server || '' }));
-        return res.json(list);
+        res.json(list);
+    } catch (e) {
+        console.error('/sync error', e);
+        res.status(500).json({ error: 'Server error' });
     }
-    users.set(nick, { lastSeen: Date.now(), server });
-    prune();
-    const list = Array.from(users.entries()).map(([n, d]) => ({ nick: n, server: d.server || '' }));
-    res.json(list);
 });
 
 app.listen(PORT, () => {
     console.log('ESP sync server on port', PORT);
 });
-
-
-
