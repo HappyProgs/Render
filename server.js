@@ -8,7 +8,7 @@ const express = require('express');
 const app = express();
 
 const PORT = process.env.PORT || 3000;
-const NICK_TTL_MS = 20000; // 20 сек без синка — считаем, что юзер отключился
+const NICK_TTL_MS = 25000; // 25 сек без синка — считаем, что юзер отключился
 
 // nick -> lastSeen (timestamp)
 const users = new Map();
@@ -21,6 +21,15 @@ function prune() {
 }
 
 app.use(express.json());
+
+// CORS: скрипт в браузере на другом домене — без этого fetch блокируется
+app.use((req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    if (req.method === 'OPTIONS') return res.sendStatus(204);
+    next();
+});
 
 // Для проверки: в браузере или Render dashboard
 app.get('/', (req, res) => {
