@@ -33,7 +33,7 @@ app.use((req, res, next) => {
 
 // Для проверки: в браузере или Render dashboard
 app.get('/', (req, res) => {
-    res.send('Server is active xDD');
+    res.send('Server is active xD');
 });
 
 // Синк: клиент шлёт nick и опционально server, получает список [{ nick, server }, ...]
@@ -54,5 +54,6 @@ app.post('/sync', (req, res) => {
 app.listen(PORT, () => {
     console.log('ESP sync server on port', PORT);
 });
+
 
 
