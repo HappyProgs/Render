@@ -1,6 +1,6 @@
 /**
  * Сервер синхронизации юзеров скрипта (только для твоего платного чита).
- * API: POST /sync { nick, server? } -> JSON [{ nick, server }, ...].
+ * API: POST /sync { nick } -> JSON string[] (список ников в сети).
  * Деплой на Render.com — юзеры платного скрипта видят только друг друга.
  */
 
@@ -10,13 +10,13 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const NICK_TTL_MS = 25000; // 25 сек без синка — считаем, что юзер отключился
 
-// nick -> { lastSeen, server }
+// nick -> lastSeen (timestamp)
 const users = new Map();
 
 function prune() {
     const now = Date.now();
-    for (const [nick, data] of users.entries()) {
-        if (now - data.lastSeen > NICK_TTL_MS) users.delete(nick);
+    for (const [nick, lastSeen] of users.entries()) {
+        if (now - lastSeen > NICK_TTL_MS) users.delete(nick);
     }
 }
 
@@ -36,25 +36,16 @@ app.get('/', (req, res) => {
     res.send('Server is active');
 });
 
-// Синк: клиент шлёт nick и опционально server, получает список [{ nick, server }, ...]
+// Синк: клиент шлёт свой ник, получает список всех активных ников
 app.post('/sync', (req, res) => {
-    try {
-        const body = req.body && typeof req.body === 'object' ? req.body : {};
-        const nick = typeof body.nick === 'string' ? body.nick.trim() : '';
-        const server = typeof body.server === 'string' ? body.server.trim() : '';
-        if (!nick || nick === 'player_spawn') {
-            prune();
-            const list = Array.from(users.entries()).map(([n, d]) => ({ nick: n, server: d.server || '' }));
-            return res.json(list);
-        }
-        users.set(nick, { lastSeen: Date.now(), server });
+    const nick = req.body && typeof req.body.nick === 'string' ? req.body.nick.trim() : '';
+    if (!nick || nick === 'player_spawn') {
         prune();
-        const list = Array.from(users.entries()).map(([n, d]) => ({ nick: n, server: d.server || '' }));
-        res.json(list);
-    } catch (e) {
-        console.error('/sync error', e);
-        res.status(500).json({ error: 'Server error' });
+        return res.json(Array.from(users.keys()));
     }
+    users.set(nick, Date.now());
+    prune();
+    res.json(Array.from(users.keys()));
 });
 
 app.listen(PORT, () => {
